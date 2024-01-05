@@ -19,7 +19,7 @@ export async function retrieveAchievementController(req,res){
 }
 export async function retrieveAllAchievementsController(req, res) {
     try {
-      // Remove the user filter to retrieve all achievements
+      
       const achievements = await achivementModel.find().populate('user');
   
       if (achievements.length < 1) {
@@ -47,7 +47,7 @@ export async function insertAchievementController(req,res){
         currUser.Achievments.push(createdAchievement._id);
         await currUser.save();
 
-        console.log(createdAchievement);
+       
         res.status(statuscode.OK).send(createdAchievement);
     } catch (error) {
         res.status(statuscode.INTERNAL_SERVER_ERROR).send({"msg":error.message});

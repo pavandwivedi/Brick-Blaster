@@ -1,16 +1,9 @@
 import express from 'express';
-import {fcmTokenController, getUserController, searchUserController} from '../controllers/UserController.js';
-import { checkUser } from '../middleware/middlewares.js';
-import { getAllUsersController } from '../controllers/UserController.js';
-
-
+import { getUserController, loginController, signupController} from '../controllers/UserController.js';
+import { checkUser,signupMiddleware } from '../middleware/middlewares.js';
 const userRouter = express.Router();
-
-
-userRouter.get('/retrieve',checkUser ,getUserController);
-userRouter.get('/retrieveall',checkUser,getAllUsersController)
-userRouter.get('/search',searchUserController)
-userRouter.post('/add-fcm-token/:_id',fcmTokenController);
-
+userRouter.post('/signup',signupMiddleware,signupController);
+userRouter.post('/login',loginController);
+userRouter.get('/retrieve',checkUser,getUserController);
 
 export default userRouter;

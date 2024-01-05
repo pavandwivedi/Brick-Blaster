@@ -1,4 +1,4 @@
-import userModel from "../models/User.js";
+/*import userModel from "../models/User.js";
 import Jwt from "jsonwebtoken";
 
 const secret_Key = "greenwebsolutions";
@@ -34,4 +34,4 @@ const generateAccessToken = (data) => {
   } catch (e) {
     console.log(e.message);
   }
-}
+}*/

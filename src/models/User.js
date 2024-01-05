@@ -1,8 +1,7 @@
 import mongoose from "mongoose";
 
 const userSchema = mongoose.Schema({
-    id:{type:String , required:true},
-    fcmTokens: [String], // Array of FCM tokens
+    fcmToken: {type:String}, 
     name:{type:String, required:true},
     email:{type:String, required:true, unique:true}, 
     profilePhotoURL:{type:String,default:null},

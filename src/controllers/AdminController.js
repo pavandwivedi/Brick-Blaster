@@ -1,6 +1,9 @@
 import adminModel from "../models/Admin.js"
 import userModel from "../models/User.js";
 import { getMessaging } from "firebase-admin/messaging";
+import bcrypt from 'bcrypt'
+import { generateAccessToken } from "../services/generateAccessToken.service.js";
+import { error, success } from "../utills/responseWrapper.utills.js";
 
 export async function adminSignupController(req,res){
     try {
@@ -21,10 +24,10 @@ export async function adminSignupController(req,res){
 }
 export async function adminLoginController(req,res){
   try {
-    console.log('login');
-    const {usernameOrEmail,password} = req.body;
+    
+    const {username,password} = req.body;
     const user = await adminModel.findOne({
-        $or:[{username:usernameOrEmail}, {email:usernameOrEmail}]
+        $or:[{username:username}, {password:password}]
     });
     if(!user){
         return res.status(404).json({message:"user not found"});
@@ -36,11 +39,11 @@ export async function adminLoginController(req,res){
     }
 
     const accessToken = generateAccessToken({...user})
-    // const {_id,password,newuser} = user;
+    
     delete user['_doc']['password'];
     delete user['_doc']['__v'];
     delete user._doc['_id'];
-    // console.log(user);
+   
 
     return res.send({...user._doc,"accessToken":accessToken});
     
@@ -51,119 +54,137 @@ export async function adminLoginController(req,res){
 
 }
 
-const generateAccessToken = (data) => {
-    try {
-      const token = Jwt.sign(data, ACCESS_SECRET_KEY, {
-        expiresIn: "30d",
-      });
-      return token;
-    } catch (e) {
-      console.log(e.message);
+
+export async function getAllUsersController(req,res){
+  try {
+      const users = await userModel.find({}).populate('achivements').populate('levels');
+      return res.send(success(200,users));
+  } catch (err) {
+      return res.send(error(500,err.message));
   }
 }
+export async function searchUserController (req, res)  {
+  try {
+    const searchTerm = req.query.term;
 
+    
+    const users = await userModel.find({ name: { $regex: new RegExp(searchTerm, 'i') } });
 
+    res.json(users);
+  } catch (error) {
+   
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
 
+export async function  fcmTokenController  (req,res)  {
+  
+        
+  const { _id } = req.params;
+  const { fcmToken } = req.body;
+try {
+const user = await userModel.findById( _id );
 
-export async function sendNotification(req,res){
-    try {
-        /*const token1 = 'e0FOYutEbtu1F6fLdYPB1J:APA91bFAWMTrmWRD3xwfrOnh02I9r-cK5uEcKBkI8A7OwKVyTW7BBezf_cWFv-jPXTYB7dUsI1QU_AQQeHtyNoG8OKM4pxiYSZaaljjBW0naVp5bO0s5x4x2m58kSlv5svmvqIX-FIRz';*/
-       /* const token2 = "fwPCsin9HypD9iiWs1cGuV:APA91bGPAKDelHjkROEyQFaZ6MapR4qwSNfMaRALc-l4IUuDDxNd-bEb3jHMTiU5or4W6UJ-OWUbOOmaHBRc-IYFpflfvZAb7M_R7mDgsqPT_M0zXu7R1jegWcaTVZhVU48YN4QdZGoX";*/
-      const  token = "fHfGbzN1cS_ucQ5CA3wuBs:APA91bEkMvW_WyXs5ONiW0iH9cFvufOcMzzDGQZi6fUcPLyu2mnzxuGf2OilXwj5q5lgUfWhFAdvrpxMuiH0MLdDWxFJ_ayHJ2UP-rq368spfRBZfLGZTvt_SZUWxELDgCCAe2pJwiLN";
-
-        const message = {
-            notification:{
-                title:"This is a Notification from brick-blaster",
-                body:"level 92 is ready for you !"
-            },
-            token
-        }
-        console.log("hyyy")
-        const result = await getMessaging().sendMulticast(message);
-        return res.send({'status':'successfully sent',result});
-    } catch (error) {
-        console.log(error.message)
-        return res.send('error in sending notification : '+error.message);
+if (!user) {
+  return res.status(404).json({ error: 'User not found' });
 }
+
+
+console.log('FCM Token:', fcmToken);
+user.fcmToken = fcmToken;
+
+
+await user.save();
+
+res.json({ message: 'FCM token added successfully' });
+
+} catch (error) {
+
+res.status(500).json({ error: 'Internal server error' })
 }
+
+}
+
 
 export async function sendNotificationController (req,res) {
-    try {
-        const { _id } = req.params;
-        const { title, body } = req.body;
-    
-        // Find the user by user ID
-        const user = await userModel.findById(_id);
-    
-        if (!user) {
-          return res.status(404).json({ error: 'User not found' });
-        }
-    
-        // Check if the user has FCM tokens
-        if (!user.fcmTokens || user.fcmTokens.length === 0) {
-          return res.status(400).json({ error: 'User does not have FCM tokens' });
-        }
-    
-        // Choose one FCM token (you may have logic to select one if there are multiple)
-        const fcmToken = user.fcmTokens[0];
-    
-        // Construct the FCM message
-        const message = {
-          notification: {
-            title: title || 'Default Title',
-            body: body || 'Default Body',
-          },
-          token: fcmToken,
-        };
-    
-        // Send the FCM message
-        const response = await getMessaging().send(message);
-    
-        console.log('Successfully sent message:', response);
-        res.status(200).json({ message: 'Successfully sent message', token: fcmToken });
-      } catch (error) {
-        console.error('Error sending message:', error);
-        res.status(500).json({ error: 'Internal server error' });
+  try {
+      const { _id } = req.params;
+      const { title, body } = req.body;
+  
+     
+      const user = await userModel.findById(_id);
+  
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
       }
+  
+      
+      if (!user.fcmToken ) {
+        return res.status(400).json({ error: 'User does not have FCM tokens' });
+      }
+  
+     
+      const fcmToken = user.fcmToken;
+  
+      
+      const message = {
+        notification: {
+          title: title || 'Default Title',
+          body: body || 'Default Body',
+        },
+        token: fcmToken,
+      };
+  
+      
+      const response = await getMessaging().send(message);
+  
+      
+      res.status(200).json({ message: 'Successfully sent message', token: fcmToken });
+    } catch (error) {
+      
+      res.status(500).json({ error: 'Internal server error' });
+    }
 }
 
 export async function sendNotificationToAllController (req,res) {
-    try {
-        const { title, body } = req.body;
-    
-        // Find all users
-        const users = await userModel.find();
-    
-        if (!users || users.length === 0) {
-          return res.status(404).json({ error: 'No users found' });
-        }
-    
-        // Iterate through each user and send a push notification
-        for (const user of users) {
-          // Check if the user has FCM tokens
-          if (user.fcmTokens && user.fcmTokens.length > 0) {
-            // Choose one FCM token (you may have logic to select one if there are multiple)
-            const fcmToken = user.fcmTokens[0];
-    
-            // Construct the FCM message
-            const message = {
-              notification: {
-                title: title || 'Default Title',
-                body: body || 'Default Body',
-              },
-              token: fcmToken,
-            };
-    
-            // Send the FCM message
-            const response = await getMessaging().send(message);
-    
-            console.log(`Successfully sent message to user ${user._id}:`, response);
-          }
-        }
-    
-        res.status(200).json({ message: 'Successfully sent messages to all users' });
-      } catch (error) {
-        console.error('Error sending messages:', error);
-        res.status(500).json({ error: 'Internal server error' });
+  try {
+      const { title, body } = req.body;
+  
+     
+      const users = await userModel.find();
+  
+      if (!users || users.length === 0) {
+        return res.status(404).json({ error: 'No users found' });
       }
+  
+     
+      for (const user of users) {
+       
+        if (user.fcmToken ) {
+         
+          const fcmToken = user.fcmToken;
+  
+          
+          const message = {
+            notification: {
+              title: title || 'Default Title',
+              body: body || 'Default Body',
+            },
+            token: fcmToken,
+          };
+  
+          
+          const response = await getMessaging().send(message);
+  
+          
+        }
+      }
+  
+      res.status(200).json({ message: 'Successfully sent messages to all users' });
+    } catch (error) {
+      
+      res.status(500).json({ error: 'Internal server error' });
+    }
 }
+
+

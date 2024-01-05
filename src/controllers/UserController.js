@@ -1,4 +1,6 @@
 import userModel from "../models/User.js";
+import { generateAccessToken } from "../services/generateAccessToken.service.js";
+import { error, success } from "../utills/responseWrapper.utills.js";
 
 export  async function getUserController(req,res){
     try {
@@ -12,64 +14,43 @@ export  async function getUserController(req,res){
         return res.send(error.message);
     }
 } 
-
-export async function getAllUsersController(req, res) {
+export async function signupController(req,res){
     try {
-      // Retrieve all users
-      const users = await userModel.find().populate('Achievments').populate('Levels');
-  
-      if (!users || users.length === 0) {
-        return res.send("No users found!");
-      }
-  
-      return res.send(users);
-    } catch (error) {
-      return res.send(error.message);
+        const {name,email,profileURL} = req.body;
+        if(!name || !email){
+            return res.send(error(422,"insufficient data"));
+        }
+
+        const existingUser =  await userModel.findOne({email});
+
+        if(existingUser){
+            return res.send(error(400,"user already present"));
+        }
+
+       const newUser = new userModel({name,email,profileURL});
+       const createdUser = await newUser.save();
+       return res.send(success(201,createdUser));
+       
+    }catch (err){
+        return res.send(error(500,err.message));
     }
-  }
-  export async function searchUserController (req, res)  {
+}
+
+export async function loginController(req,res){
     try {
-      const searchTerm = req.query.term;
-  
-      // Use a regular expression to perform a case-insensitive search
-      const users = await userModel.find({ name: { $regex: new RegExp(searchTerm, 'i') } });
-  
-      res.json(users);
-    } catch (error) {
-      console.error('Error searching users:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+        const {email }= req.body;
+
+        if(!email){
+            return res.send(error(400,"email required"));
+        }
+        const user = await userModel.findOne({email});
+        if(!user){
+            return res.send(error(404,"user not found"));
+        }
+        const accessToken = generateAccessToken({...user});
+        return res.send(success(200,{accessToken}));
+    } catch (err) {
+        return res.send(error(500,err.message));
     }
-  };
+}
 
-  
-  
- export async function  fcmTokenController  (req,res)  {
-  
-        
-        const { _id } = req.params;
-        const { fcmToken } = req.body;
-     try {
-      const user = await userModel.findById( _id );
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      // Add the FCM token to the user's document
-      console.log('FCM Token:', fcmToken);
-      user.fcmTokens.push(fcmToken);
-    
-      // Save the updated user document
-      await user.save();
-  
-      res.json({ message: 'FCM token added successfully' });
-    
-     } catch (error) {
-      console.error('Error adding FCM token:', error);
-      res.status(500).json({ error: 'Internal server error' })
-     }
-
-  }
-  
-  
-  

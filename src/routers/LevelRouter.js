@@ -5,7 +5,7 @@ import { checkUser } from '../middleware/middlewares.js';
 const levelRouter = express.Router();
 levelRouter.post('/insert',checkUser,postLevelController);
 levelRouter.get('/retrieve/:levelNo',checkUser, getLevelController);
-levelRouter.patch('/update/:levelNo',checkUser,updateLevelController);
+levelRouter.put('/update/:levelNo',checkUser,updateLevelController);
 levelRouter.get('/retrievealllevel/',checkUser, getAllLevelsController);
 
 export default levelRouter;

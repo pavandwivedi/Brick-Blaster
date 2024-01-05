@@ -1,10 +1,9 @@
 import mongoose from "mongoose";
-
-const mongoURL = 'mongodb://127.0.0.1:27017/BrickBlaster';
-
+import dotenv from "dotenv"
+dotenv.config();
 export default async function connectDB(){
     try {
-        const connect =  await mongoose.connect(mongoURL);
+        const connect =  await mongoose.connect(process.env.mongoURL);
         console.log('DB connected! '+connect.connection.host);
     } catch (error) {
         console.log(error);
