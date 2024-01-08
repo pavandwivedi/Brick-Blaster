@@ -1,9 +1,16 @@
 import mongoose from "mongoose";
+mongoose.set('strictQuery',false);
 import dotenv from "dotenv"
 dotenv.config();
 export default async function connectDB(){
     try {
-        const connect =  await mongoose.connect(process.env.mongoURL);
+        const DB_OPTIONS = {
+   dbName:process.env.DBNAME,
+   user:process.env.DBUSERNAME,
+   pass:process.env.DBPASSWORD,
+   authSource:process.env.DBAUTHSOURCE
+ }
+        const connect =  await mongoose.connect(  process.env.mongoURL,DB_OPTIONS);
         console.log('DB connected! '+connect.connection.host);
     } catch (error) {
         console.log(error);
