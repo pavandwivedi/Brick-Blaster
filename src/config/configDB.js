@@ -10,7 +10,7 @@ export default async function connectDB(){
    pass:process.env.DBPASSWORD,
    authSource:process.env.DBAUTHSOURCE
  }
-        const connect =  await mongoose.connect(  process.env.DATABASE_URL,DB_OPTIONS);
+        const connect =  await mongoose.connect(  process.env.mongoURL);
         console.log('DB connected! '+connect.connection.host);
     } catch (error) {
         console.log(error);
